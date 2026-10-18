@@ -1033,7 +1033,8 @@ function renderFacilitators(list){
   });
   map.addLayer(markers);
   const skipped = list.filter(f => f.lat === null || f.lat === undefined || isNaN(f.lat)).length;
-  document.getElementById('statusText').textContent = plotted + ' facilitators' + (skipped ? ' · ' + skipped + ' need a city or country' : '');
+  const uniq = new Set(list.map(f => (f.name || '').toLowerCase().replace(/\s+/g,' ').trim()).filter(Boolean)).size;
+  document.getElementById('statusText').textContent = uniq + (uniq === 1 ? ' facilitator' : ' facilitators') + ' · ' + plotted + (plotted === 1 ? ' location' : ' locations') + (skipped ? ' · ' + skipped + ' need a city or country' : '');
 }
 
 function finishLoading(){
