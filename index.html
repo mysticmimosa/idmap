@@ -1110,14 +1110,38 @@ function loadLiveData(){
 
 loadLiveData();
 
+// ---- Search: matches name, business, city, state (abbrev or full), country (and common aliases) ----
+const US_STATES = {al:"Alabama",ak:"Alaska",az:"Arizona",ar:"Arkansas",ca:"California",co:"Colorado",ct:"Connecticut",de:"Delaware",fl:"Florida",ga:"Georgia",hi:"Hawaii",id:"Idaho",il:"Illinois",in:"Indiana",ia:"Iowa",ks:"Kansas",ky:"Kentucky",la:"Louisiana",me:"Maine",md:"Maryland",ma:"Massachusetts",mi:"Michigan",mn:"Minnesota",ms:"Mississippi",mo:"Missouri",mt:"Montana",ne:"Nebraska",nv:"Nevada",nh:"New Hampshire",nj:"New Jersey",nm:"New Mexico",ny:"New York",nc:"North Carolina",nd:"North Dakota",oh:"Ohio",ok:"Oklahoma",or:"Oregon",pa:"Pennsylvania",ri:"Rhode Island",sc:"South Carolina",sd:"South Dakota",tn:"Tennessee",tx:"Texas",ut:"Utah",vt:"Vermont",va:"Virginia",wa:"Washington",wv:"West Virginia",wi:"Wisconsin",wy:"Wyoming",dc:"Washington DC District of Columbia"};
+const CA_PROVS = {ab:"Alberta",bc:"British Columbia",mb:"Manitoba",nb:"New Brunswick",nl:"Newfoundland and Labrador",ns:"Nova Scotia",on:"Ontario",pe:"Prince Edward Island",qc:"Quebec",sk:"Saskatchewan"};
+const AU_STATES = {nsw:"New South Wales",vic:"Victoria",qld:"Queensland",wa:"Western Australia",sa:"South Australia",tas:"Tasmania",act:"Australian Capital Territory",nt:"Northern Territory"};
+const COUNTRY_ALIASES = [
+  [["united states","usa","us","u.s.","u.s.a.","america","united states of america"], "united states usa us america"],
+  [["united kingdom","uk","u.k.","great britain","england","scotland","wales","northern ireland"], "united kingdom uk great britain"],
+  [["uae","united arab emirates"], "united arab emirates uae"],
+  [["netherlands","holland"], "netherlands holland"],
+  [["czechia","czech republic"], "czechia czech republic"]
+];
+function norm(t){ return String(t||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[.,]/g,' ').replace(/\s+/g,' ').trim(); }
+function searchText(f){
+  const st = norm(f.state), co = norm(f.country);
+  let extra = '';
+  if (st) {
+    const k = st.replace(/\s/g,'');
+    if (/^(united states|usa|us|america)/.test(co) || (US_STATES[k] && !co)) extra += ' ' + (US_STATES[k]||'');
+    if (co.startsWith('canada')) extra += ' ' + (CA_PROVS[k]||'');
+    if (co.startsWith('australia')) extra += ' ' + (AU_STATES[k]||'');
+    if (STATE_NAMES[k]) extra += ' ' + STATE_NAMES[k];
+  }
+  COUNTRY_ALIASES.forEach(([names, al]) => { if (names.includes(co)) extra += ' ' + al; });
+  return norm([f.name, f.business, f.city, f.state, f.country, f.location, extra].join(' '));
+}
 document.getElementById('search').addEventListener('input', function(e){
-  const q = e.target.value.toLowerCase().trim();
-  if(!q){ allFacilitatorMarkers.forEach(m => markers.addLayer(m)); return; }
+  const words = norm(e.target.value).split(' ').filter(Boolean);
   markers.clearLayers();
   allFacilitatorMarkers.forEach(m => {
     const f = m.facilitatorData;
-    const hay = [f.name, f.business, f.city, f.state, f.country, f.location].join(' ').toLowerCase();
-    if (hay.includes(q)) markers.addLayer(m);
+    if (!f._hay) f._hay = searchText(f);
+    if (words.every(w => f._hay.includes(w))) markers.addLayer(m);
   });
 });
 </script>
