@@ -937,16 +937,24 @@ function geocodeRow(city, state, country, seed){
   return {lat, lng, label};
 }
 
-const map = L.map('map', { zoomControl:false, preferCanvas:true, minZoom:2, maxBounds:[[-85,-180],[85,180]], maxBoundsViscosity:1 }).setView([20, 10], 2.3);
+const map = L.map('map', { zoomControl:false, preferCanvas:true, zoomSnap:0.25, minZoom:2, maxBounds:[[-85,-180],[85,180]], maxBoundsViscosity:1 }).setView([20, 10], 2.3);
 // Built-in base map: works even where outside map tiles cannot load
 map.createPane('baseland'); map.getPane('baseland').style.zIndex = 150;
 L.geoJSON(WORLD, { pane:'baseland', interactive:false, attribution:'Land: Natural Earth', style:{ fillColor:'#f6efdd', fillOpacity:1, color:'#cdbf9f', weight:0.6 } }).addTo(map);
 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
   attribution: 'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, OpenStreetMap contributors',
-  maxNativeZoom: 16, maxZoom: 18, noWrap: true
+  maxNativeZoom: 16, maxZoom: 18, noWrap: true, bounds: [[-85.06,-180],[85.06,180]]
 }).addTo(map);
-L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', { maxNativeZoom: 16, maxZoom: 18, noWrap: true }).addTo(map);
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', { maxNativeZoom: 16, maxZoom: 18, noWrap: true, bounds: [[-85.06,-180],[85.06,180]] }).addTo(map);
 L.control.zoom({ position: 'bottomright' }).addTo(map);
+// Never zoom out past the edges of the world (avoids empty strips on wide screens)
+function fitMinZoom(){
+  const z = map.getBoundsZoom([[-85,-180],[85,180]], true);
+  map.setMinZoom(z);
+  if (map.getZoom() < z) map.setZoom(z);
+}
+fitMinZoom();
+map.on('resize', fitMinZoom);
 
 const markers = L.markerClusterGroup({
   iconCreateFunction: function(cluster){
